@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulasi Gadai Crypto</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0e0e17;
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      background: #1e1e2f;
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 550px;
+      width: 100%;
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+    }
+
+    h2 {
+      text-align: center;
+      color: #00c3ff;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      margin: 12px 0;
+      font-size: 16px;
+    }
+
+    input[type="search"], input[type="number"], select {
+      background: #2c2c40;
+      color: #fff;
+    }
+
+    button {
+      background: #4e9af1;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #337fd9;
+    }
+
+    .result {
+      margin-top: 20px;
+      background: #2a2a44;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    .result span {
+      color: #00ffc3;
+      font-weight: bold;
+    }
+
+    .history-container {
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .toggle-btn {
+      background: #4e9af1;
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .history {
+      font-size: 13px;
+      background: #2a2a44;
+      padding: 15px;
+      border-radius: 12px;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .history h3 {
+      text-align: center;
+      color: #00c3ff;
+    }
+
+    .history ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .history li {
+      background: #333;
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    footer {
+      background: #2a2a44;
+      width: 100%;
+      padding: 15px;
+      text-align: center;
+      margin-top: 30px;
+      border-radius: 12px;
+    }
+
+    footer a {
+      color: #00c3ff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Simulasi Gadai Crypto</h2>
+
+    <input type="search" id="search-input" placeholder="Cari nama koin...">
+    <select id="crypto-select" size="6"></select>
+
+    <input type="number" id="amount-input" placeholder="Jumlah koin" min="0.01" value="1">
+
+    <label for="tenor-select">Pilih Lama Gadai (hari):</label>
+    <select id="tenor-select">
+      <option value="7">7 Hari</option>
+      <option value="14">14 Hari</option>
+      <option value="30">30 Hari</option>
+      <option value="60">60 Hari</option>
+    </select>
+
+    <button onclick="calculateLoan()">Hitung Pinjaman</button>
+
+    <div class="result" id="result" style="display:none;">
+      <p>Harga Koin Saat Ini: $<span id="price-value">0</span></p>
+      <p>Nilai Aset: $<span id="asset-value">0</span></p>
+      <p>Pinjaman Maksimal (68%): $<span id="loan-value">0</span></p>
+      <p>Total Bunga (0.17%/hari): $<span id="interest-value">0</span></p>
+      <p>Biaya Admin (1% dari aset): $<span id="admin-value">0</span></p>
+      <p><strong>Total Pelunasan: $<span id="total-pay">0</span></strong></p>
+    </div>
+
+    <div class="history-container">
+      <button class="toggle-btn" onclick="toggleHistory()">Tampilkan/Sembunyikan Riwayat</button>
+      <div class="history hidden" id="history">
+        <h3>Riwayat Simulasi</h3>
+        <ul id="history-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Hubungi Kami:</p>
+    <p>📞 <a href="tel:+628567624130">08567624130</a> | 📧 <a href="mailto:cv.sellingwithus@gmail.com">cv.sellingwithus@gmail.com</a></p>
+  </footer>
+
+  <script>
+    const select = document.getElementById('crypto-select');
+    const searchInput = document.getElementById('search-input');
+    let coinList = [];
+
+    fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1')
+      .then(res => res.json())
+      .then(data => {
+        coinList = data.sort((a, b) => a.name.localeCompare(b.name)); // Urut alfabet
+        renderOptions(coinList);
+      });
+
+    function renderOptions(coins) {
+      select.innerHTML = '';
+      coins.forEach(coin => {
+        const option = document.createElement('option');
+        option.value = coin.id;
+        option.textContent = `${coin.name} (${coin.symbol.toUpperCase()})`;
+        select.appendChild(option);
+      });
+    }
+
+    searchInput.addEventListener('input', () => {
+      const keyword = searchInput.value.toLowerCase();
+      const filtered = coinList.filter(c =>
+        c.name.toLowerCase().includes(keyword) || c.symbol.toLowerCase().includes(keyword)
+      );
+      renderOptions(filtered);
+    });
+
+    async function calculateLoan() {
+      const coinId = select.value;
+      const amount = parseFloat(document.getElementById('amount-input').value);
+      const days = parseInt(document.getElementById('tenor-select').value);
+      if (!coinId || isNaN(amount)) return;
+
+      const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+      const data = await res.json();
+      const price = data[coinId].usd;
+
+      const assetValue = price * amount;
+      const loanValue = assetValue * 0.68;
+      const interest = loanValue * 0.0017 * days;
+      const adminFee = assetValue * 0.01;
+      const totalPay = loanValue + interest + adminFee;
+
+      document.getElementById('price-value').textContent = price.toFixed(2);
+      document.getElementById('asset-value').textContent = assetValue.toFixed(2);
+      document.getElementById('loan-value').textContent = loanValue.toFixed(2);
+      document.getElementById('interest-value').textContent = interest.toFixed(2);
+      document.getElementById('admin-value').textContent = adminFee.toFixed(2);
+      document.getElementById('total-pay').textContent = totalPay.toFixed(2);
+      document.getElementById('result').style.display = 'block';
+
+      saveHistory(coinId, amount, price, assetValue, loanValue, interest, adminFee, totalPay);
+    }
+
+    function saveHistory(coinId, amount, price, assetValue, loanValue, interest, adminFee, totalPay) {
+      const history = JSON.parse(localStorage.getItem('simulationHistory')) || [];
+      const newHistory = {
+        coinId,
+        amount,
+        price,
+        assetValue,
+        loanValue,
+        interest,
+        adminFee,
+        totalPay,
+        date: new Date().toLocaleString()
+      };
+
+      history.push(newHistory);
+      localStorage.setItem('simulationHistory', JSON.stringify(history));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const historyList = JSON.parse(localStorage.getItem('simulationHistory')) || [];
+      const historyContainer = document.getElementById('history-list');
+      historyContainer.innerHTML = '';
+
+      historyList.forEach(record => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${record.date} - ${record.coinId.toUpperCase()} | Pinjaman: $${record.loanValue.toFixed(2)} | Pelunasan: $${record.totalPay.toFixed(2)}`;
+        historyContainer.appendChild(listItem);
+      });
+    }
+
+    function toggleHistory() {
+      const historyDiv = document.getElementById('history');
+      historyDiv.classList.toggle('hidden');
+    }
+
+    window.onload = function() {
+      renderHistory();
+    };
+  </script>
+</body>
+</html>
